@@ -25,7 +25,3 @@ def run_ollama_api(model: str, prompt: str, stream: bool = True):
                     output += token
                     print(token, end="", flush=True)
     return output
-
-"""
-res = run_ollama_api("gemma3:4b", "너 파이썬으로 간단한 계산기 만들 수 있어?", stream=True)
-"""
