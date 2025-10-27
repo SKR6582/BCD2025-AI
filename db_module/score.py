@@ -68,3 +68,29 @@ def delete_ai_data(classid):
         print("❌ Error deleting data:", e)
     finally:
         conn.close()
+
+def get_ranking_by_difficulty(difficulty, limit=10):
+    """
+    특정 난이도(difficulty)에 대한 점수 순위 가져오기
+    :param difficulty: 난이도 (예: '1', '2', '3')
+    :param limit: 상위 몇 명까지 가져올지 (기본값: 10)
+    :return: [(classid, score, client), ...] 형태의 리스트
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+            SELECT classid, score, client
+            FROM BCD2025_AI
+            WHERE difficulty = %s
+            ORDER BY score DESC
+            LIMIT %s
+            """
+            cursor.execute(sql, (difficulty, limit))
+            result = cursor.fetchall()
+            return result
+    except Exception as e:
+        print("❌ Error fetching ranking:", e)
+        return []
+    finally:
+        conn.close()
