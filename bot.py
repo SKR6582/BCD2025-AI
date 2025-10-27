@@ -52,6 +52,7 @@ async def _chat(ctx, message: str):
         if len(output) % 15 == 0:
             await sent.edit(content=f"```{output}```")
 
+
     await sent.edit(content=f"```{output}```")
 
 if __name__ == '__main__':

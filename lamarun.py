@@ -1,7 +1,9 @@
 import requests
 import json
+import time
+import random
 
-def run_ollama_api(model: str, prompt: str, stream: bool = True):
+def run_ollama_api(model: str, prompt: str, stream: bool = True, human_delay: bool = True):
     url = "http://localhost:11434/api/generate"
     payload = {
         "model": model,
@@ -21,7 +23,15 @@ def run_ollama_api(model: str, prompt: str, stream: bool = True):
                     continue
                 data = json.loads(line)
                 if "response" in data:
-                    token = data["response"]   # 실제 토큰 단위
+                    token = data["response"]
                     output += token
                     print(token, end="", flush=True)
+
+                    # 사람처럼 생각하다가 말하는 느낌으로 랜덤 딜레이
+                    if human_delay:
+                        time.sleep(random.uniform(0.05, 0.25))
     return output
+
+
+# 예시 실행
+run_ollama_api(model="gemma3:4b", prompt="1에서 1000까지의 숫자를 모두 더하면 몇인가요?",human_delay=False)
