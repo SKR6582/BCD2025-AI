@@ -1,74 +1,154 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>AI 콘솔</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>리더보드</title>
+  <link rel="stylesheet" href="/templates/style.css" onerror="this.remove()" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: #f4f4f4;
-    }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-      text-align: center;
-    }
-    textarea {
-      width: 100%;
-      height: 150px;
-      margin-bottom: 10px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      resize: none;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      background-color: #007BFF;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .output {
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #e9ecef;
-      border-radius: 4px;
-      white-space: pre-wrap; /* Preserve whitespace */
-    }
+    /* 기본 스타일 (style.css가 없으면 이 인라인 스타일이 적용) */
+    :root { color-scheme: light dark; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; margin: 0; padding: 24px; }
+    h1 { margin: 0 0 16px; }
+    .boards { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 16px; }
+    .board { border: 1px solid #ccc; border-radius: 8px; padding: 12px; background: rgba(0,0,0,0.02); }
+    .board h2 { margin: 4px 0 12px; font-size: 18px; }
+    .table-scroll { max-height: 300px; overflow: auto; position: relative; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border-bottom: 1px solid #e0e0e0; text-align: left; font-variant-numeric: tabular-nums; }
+    th { background: rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 1; }
+    caption { text-align: left; font-weight: 600; margin-bottom: 8px; }
+    .muted { opacity: .7; font-size: 14px; }
+    .error { color: #c62828; margin-top: 8px; font-size: 14px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>AI 콘솔</h1>
-    <textarea id="input" placeholder="입력하세요..."></textarea>
-    <button id="submit">제출</button>
-    <div class="output" id="output"></div>
+  <h1>AI 대회 리더보드</h1>
+  <p class="muted">10초마다 자동으로 갱신됩니다.</p>
+
+  <div id="error" class="error" style="display:none"></div>
+
+  <div class="boards">
+    <section class="board" aria-labelledby="easy-title">
+      <h2 id="easy-title">쉬움 (난이도 1)</h2>
+      <div id="scroll-easy" class="table-scroll" tabindex="0" aria-label="쉬움 리더보드 스크롤 영역">
+        <table>
+          <thead>
+            <tr><th>순위</th><th>학번</th><th>점수</th></tr>
+          </thead>
+          <tbody id="tbody-easy"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="board" aria-labelledby="normal-title">
+      <h2 id="normal-title">노말 (난이도 2)</h2>
+      <div id="scroll-normal" class="table-scroll" tabindex="0" aria-label="노말 리더보드 스크롤 영역">
+        <table>
+          <thead>
+            <tr><th>순위</th><th>학번</th><th>점수</th></tr>
+          </thead>
+          <tbody id="tbody-normal"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="board" aria-labelledby="hard-title">
+      <h2 id="hard-title">하드 (난이도 3)</h2>
+      <div id="scroll-hard" class="table-scroll" tabindex="0" aria-label="하드 리더보드 스크롤 영역">
+        <table>
+          <thead>
+            <tr><th>순위</th><th>학번</th><th>점수</th></tr>
+          </thead>
+          <tbody id="tbody-hard"></tbody>
+        </table>
+      </div>
+    </section>
   </div>
 
+  <script src="/templates/script.js"></script>
   <script>
-    document.getElementById('submit').addEventListener('click', function() {
-      const userInput = document.getElementById('input').value;
-      const aiResponse = simulateAIResponse(userInput);
-      document.getElementById('output').textContent = aiResponse;
-    });
+    // script.js 로드 실패 대비 (인라인 폴백)
+    if (!window.__leaderboardLoaded) {
+      (function(){
+        const api = '/api/leaderboard';
+        const $err = document.getElementById('error');
 
-    function simulateAIResponse(input) {
-      // 여기에서 AI 논리 구현 (임시)
-      return `AI가 응답: ${input}`;
+        // 간단한 자동 스크롤 매니저 (외부 script.js 없을 때만 사용)
+        if (!window.__autoScrollMgr) {
+          const stateMap = new WeakMap();
+          const SPEED = 40; // px/s
+          const BOTTOM_PAUSE = 1200;
+          const TOP_PAUSE = 400;
+          let containers = [];
+
+          function ensure(el){
+            let st = stateMap.get(el);
+            if (!st){
+              st = { raf:0, paused:false, last:0, phase:'run', t:0 };
+              stateMap.set(el, st);
+              el.addEventListener('mouseenter', ()=>pause(el,true));
+              el.addEventListener('mouseleave', ()=>pause(el,false));
+              el.addEventListener('focusin', ()=>pause(el,true));
+              el.addEventListener('focusout', ()=>pause(el,false));
+            }
+            return st;
+          }
+          function pause(el, v){ const st=ensure(el); st.paused=v; if(v&&st.raf){cancelAnimationFrame(st.raf);st.raf=0;} if(!v&&!st.raf){st.last=0; st.raf=requestAnimationFrame(ts=>tick(el,ts));} }
+          function stop(el){ const st=ensure(el); if(st.raf){cancelAnimationFrame(st.raf);st.raf=0;} if(st.t){clearTimeout(st.t);st.t=0;} st.phase='run'; st.last=0; }
+          function start(el){ stop(el); el.scrollTop=0; const st=ensure(el); st.raf=requestAnimationFrame(ts=>tick(el,ts)); }
+          function tick(el, ts){
+            const st = ensure(el);
+            if (st.paused){ st.raf=0; return; }
+            if (!st.last) st.last = ts; const dt = Math.min(100, ts-st.last); st.last = ts;
+            const max = el.scrollHeight - el.clientHeight; if (max<=0){ st.raf=0; return; }
+            if (st.phase==='run'){
+              el.scrollTop = Math.min(max, el.scrollTop + SPEED*(dt/1000));
+              if (el.scrollTop >= max-1){
+                st.phase='bottom'; st.t=setTimeout(()=>{ st.t=0; el.scrollTop=0; st.phase='top'; st.t=setTimeout(()=>{ st.t=0; st.phase='run'; st.raf=requestAnimationFrame(ts2=>tick(el,ts2)); }, TOP_PAUSE); }, BOTTOM_PAUSE);
+                st.raf=0; return;
+              }
+            }
+            st.raf = requestAnimationFrame(ts2=>tick(el, ts2));
+          }
+          function refreshAll(){
+            containers = Array.from(document.querySelectorAll('.table-scroll'));
+            containers.forEach(el=>{ stop(el); if (el.scrollHeight>el.clientHeight){ start(el);} else { el.scrollTop=0; } });
+          }
+          function stopAll(){ containers.forEach(stop); }
+          document.addEventListener('visibilitychange', ()=>{ containers.forEach(el=>pause(el, document.hidden)); });
+          window.__autoScrollMgr = { refreshAll, stopAll };
+        }
+
+        function renderSection(tbodyId, data) {
+          const $tbody = document.getElementById(tbodyId);
+          $tbody.innerHTML = '';
+          data.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${idx+1}</td><td>${row.classid ?? ''}</td><td>${row.score ?? ''}</td>`;
+            $tbody.appendChild(tr);
+          });
+        }
+        async function refresh() {
+          try {
+            $err.style.display = 'none';
+            const res = await fetch(api, {cache: 'no-store'});
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            renderSection('tbody-easy', json.easy || []);
+            renderSection('tbody-normal', json.normal || []);
+            renderSection('tbody-hard', json.hard || []);
+            if (window.__autoScrollMgr) window.__autoScrollMgr.refreshAll();
+          } catch (e) {
+            $err.textContent = '리더보드를 불러오지 못했습니다: ' + (e && e.message ? e.message : e);
+            $err.style.display = 'block';
+            if (window.__autoScrollMgr) window.__autoScrollMgr.stopAll();
+          }
+        }
+        refresh();
+        setInterval(refresh, 10000);
+      })();
     }
   </script>
 </body>
