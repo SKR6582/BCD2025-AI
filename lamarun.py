@@ -34,4 +34,4 @@ def run_ollama_api(model: str, prompt: str, stream: bool = True, human_delay: bo
 
 
 # 예시 실행
-run_ollama_api(model="gemma3:4b", prompt="1에서 1000까지의 숫자를 모두 더하면 몇인가요?",human_delay=False)
+run_ollama_api(model="gemma3:4b", prompt="",human_delay=False)
