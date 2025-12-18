@@ -1,6 +1,6 @@
 from db_module.db_connection import get_connection
 
-def insert_ai_data(difficulty, classid, score, client):
+def insert_ai_data(difficulty, classid, score, client=None):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:

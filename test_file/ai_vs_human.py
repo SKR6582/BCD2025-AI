@@ -19,6 +19,7 @@ if parent_dir not in sys.path:
 from typing import List, Tuple, Optional
 from db_module.quiz import get_random_quiz_by_category, list_quiz_titles
 from db_module.db_connection import get_connection
+from db_module.score import insert_ai_data, exist, update_ai_score
 
 # --- Configuration ---
 WINDOW_WIDTH = 1000
@@ -154,6 +155,11 @@ class Game:
         self.cursor_visible = True
         self.cursor_timer = 0
 
+        # game setting
+        self.difficulty = "1"
+        self.score = 0
+        self.game_over_detail = ""
+
     def get_new_quiz(self):
         # Deck of Cards System: guarantees no repeats until all are shown
         if not hasattr(self, 'quiz_deck') or not self.quiz_deck:
@@ -247,7 +253,7 @@ class Game:
         self.ai_finished = True
 
     def start_round(self):
-        self.current_quiz = self.get_new_quiz()
+        # self.current_quiz is already set in start_roulette_logic
         title = self.current_quiz.get('title', '')
         desc = self.current_quiz.get('description', '')
 
@@ -343,6 +349,7 @@ class Game:
 
     def start_roulette_logic(self):
         self.current_quiz = self.get_new_quiz()
+        self.difficulty = str(self.current_quiz.get('difficulty', '1'))
         self.roulette_start_tick = pygame.time.get_ticks()
         # Shuffle candidates for visual variety
         random.shuffle(self.roulette_candidates)
@@ -351,21 +358,43 @@ class Game:
         # 1. Check Correctness
         correct_ans = self.current_quiz.get('correct', '') or ""
         self.game_end_time = pygame.time.get_ticks() - self.start_ticks
+        self.score = self.game_end_time
 
         if self.check_answer(self.user_input, correct_ans):
-            # Correct! Win!
-            self.winner = 'HUMAN'
-            self.ai_stop_event.set() # Stop AI thread
-            self.state = STATE_RESULT
+            self.end_game('HUMAN', 'CORRECT')
         else:
-            # Wrong! Strict rule: Fail immediately? Or just red flash?
-            # User request: "AI 보다 빨랐으면 통과" (implies matching speed)
-            # Let's say: Wrong -> Lose turn or Lose game?
-            # Let's simple: Wrong Answer = Loss (Game Over)
-            self.winner = 'AI'
-            self.fail_reason = 'WRONG_ANSWER'
-            self.ai_stop_event.set() # Stop AI thread
-            self.state = STATE_RESULT
+            self.end_game('AI', 'WRONG_ANSWER')
+
+    def end_game(self, winner, reason):
+        if self.state == STATE_RESULT:
+            return
+
+        self.winner = winner
+        self.fail_reason = reason
+        self.state = STATE_RESULT
+        self.ai_stop_event.set()
+
+        # Detail message logic
+        if winner == 'HUMAN':
+            if reason == 'AI_WRONG':
+                self.game_over_detail = "AI가 오답을 제출하여 승리하셨습니다!"
+                add = True
+            else:
+                self.game_over_detail = "AI보다 빠르고 정확했습니다!"
+                add = True
+        else:
+            if reason == 'WRONG_ANSWER':
+                self.game_over_detail = "오답입니다... 정확도가 중요합니다."
+                add = False
+            elif reason == 'TOO_SLOW':
+                self.game_over_detail = "AI가 먼저 정답을 제출했습니다."
+                add = False
+
+        try:
+            if add :
+                insert_ai_data(self.difficulty, self.student_id, self.score, winner)
+        except Exception as e:
+            print(f"Error while saving score: {e}")
 
     def update(self, dt):
         self.cursor_timer += dt
@@ -416,6 +445,7 @@ class Game:
             # Check if AI finished and human hasn't submitted
             if self.ai_finished and self.winner is None:
                 self.game_end_time = pygame.time.get_ticks() - self.start_ticks
+                self.score = self.game_end_time
                 # Validate AI Answer
                 # Parse "Answer: [XYZ]" from the end
                 # Regex look for "Answer:" then capture until end or newline
@@ -436,15 +466,9 @@ class Game:
                     print(f"[DEBUG] AI format mismatch. Text: {self.ai_current_text[-50:]}")
 
                 if ai_correct:
-                    # AI Finished and Correct -> Human too slow
-                    self.winner = 'AI'
-                    self.fail_reason = 'TOO_SLOW'
+                    self.end_game('AI', 'TOO_SLOW')
                 else:
-                    # AI Finished but Wrong -> Human Wins!
-                    self.winner = 'HUMAN'
-                    self.fail_reason = 'AI_WRONG' # Technically success reason for human
-
-                self.state = STATE_RESULT
+                    self.end_game('HUMAN', 'AI_WRONG')
 
     def draw(self):
         self.screen.fill(BG_COLOR)
@@ -614,6 +638,7 @@ class Game:
         cd = self.fonts['xl'].render(normalize_text(str(self.countdown_val)), True, (255, 255, 255))
         self.screen.blit(cd, cd.get_rect(center=(WINDOW_WIDTH//2, WINDOW_HEIGHT//2)))
 
+
     def draw_overlay_result(self):
         overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0,0,0,150))
@@ -634,17 +659,8 @@ class Game:
         self.screen.blit(head, head.get_rect(center=(box.centerx, box.y + 80)))
 
         # Detail
-        detail = ""
-        if self.winner == 'HUMAN':
-            if self.fail_reason == 'AI_WRONG':
-                detail = "AI가 오답을 제출하여 승리하셨습니다!"
-            else:
-                detail = "AI보다 빠르고 정확했습니다!"
-        else:
-            if self.fail_reason == 'WRONG_ANSWER':
-                detail = "오답입니다... 정확도가 중요합니다."
-            elif self.fail_reason == 'TOO_SLOW':
-                detail = "AI가 먼저 정답을 제출했습니다."
+        detail = self.game_over_detail
+
 
         det_surf = self.fonts['md'].render(normalize_text(detail), True, TEXT_COLOR)
         self.screen.blit(det_surf, det_surf.get_rect(center=(box.centerx, box.y + 160)))
@@ -652,6 +668,7 @@ class Game:
         # Continue
         cont = self.fonts['sm'].render(normalize_text("엔터키를 눌러 새 게임 시작 (학번 입력)"), True, SUBTEXT_COLOR)
         self.screen.blit(cont, cont.get_rect(center=(box.centerx, box.bottom - 50)))
+
 
 if __name__ == "__main__":
     Game().run()
