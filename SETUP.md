@@ -12,6 +12,8 @@ python.exe -m pip install -r requirements.txt
 ```shell
 cp example.txt .env
 ```
+**Caution** BCD2025-AI project requires dual.env. So You must set .env file both project root and /test_file dir.
+
 5. Run
 5-1. Run the web server
 ```shell
