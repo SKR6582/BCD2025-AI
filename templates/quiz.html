@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Manager - AI vs Human</title>
+  <!-- Using CDN for Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/templates/quiz_style.css">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1
+          style="background: linear-gradient(to right, #6366f1, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+          Quiz Manager</h1>
+        <p style="color: var(--text-muted); margin-top: 0.5rem;">Create and manage your AI vs Human quizzes</p>
+      </div>
+      <button class="btn btn-primary" id="add-quiz-btn">
+        <span>+</span> Add New Quiz
+      </button>
+    </header>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 100px;">Difficulty</th>
+            <th>Quiz Info</th>
+            <th>Description</th>
+            <th>Answer</th>
+            <th style="width: 150px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="quiz-list">
+          <!-- Loaded dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="quiz-modal" class="modal">
+    <div class="modal-content">
+      <h2 id="modal-title" style="margin-bottom: 1.5rem;">Add New Quiz</h2>
+      <form id="quiz-form">
+        <div class="form-group">
+          <label>Quiz Title</label>
+          <input type="text" name="title" placeholder="e.g. Python Basics" required>
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <input type="text" name="category" placeholder="e.g. Programming">
+        </div>
+        <div class="form-group">
+          <label>Difficulty</label>
+          <select name="difficulty" required>
+            <option value="1">Easy</option>
+            <option value="2" selected>Normal</option>
+            <option value="3">Hard</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description (Question Content)</label>
+          <textarea name="description" rows="4" placeholder="Enter the quiz question details..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Correct Answer</label>
+          <input type="text" name="correct" placeholder="The expected answer">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+          <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Quiz</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/templates/quiz_script.js"></script>
+</body>
+
+</html>
