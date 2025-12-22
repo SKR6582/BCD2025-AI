@@ -35,3 +35,5 @@ def run_ollama_api(model: str, prompt: str, stream: bool = True, human_delay: bo
 
 # 예시 실행
 run_ollama_api(model="gemma3:4b", prompt="",human_delay=False)
+
+

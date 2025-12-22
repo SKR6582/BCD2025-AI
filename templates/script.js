@@ -1,7 +1,7 @@
 // 리더보드 자동 갱신 스크립트 (10초 간격)
 // 템플릿의 인라인 폴백과 중복 실행을 방지하기 위한 플래그
 window.__leaderboardLoaded = true;
-(function(){
+(function () {
   const api = '/api/leaderboard';
   const $err = document.getElementById('error');
 
@@ -12,42 +12,42 @@ window.__leaderboardLoaded = true;
   const stateMap = new WeakMap();
   let allContainers = [];
 
-  function ensureState(el){
+  function ensureState(el) {
     let st = stateMap.get(el);
     if (!st) {
       st = { raf: 0, paused: false, lastTs: 0, phase: 'run', pendingTimer: 0 };
       stateMap.set(el, st);
-      el.addEventListener('mouseenter', ()=>pause(el,true));
-      el.addEventListener('mouseleave', ()=>pause(el,false));
-      el.addEventListener('focusin', ()=>pause(el,true));
-      el.addEventListener('focusout', ()=>pause(el,false));
+      el.addEventListener('mouseenter', () => pause(el, true));
+      el.addEventListener('mouseleave', () => pause(el, false));
+      el.addEventListener('focusin', () => pause(el, true));
+      el.addEventListener('focusout', () => pause(el, false));
     }
     return st;
   }
 
-  function pause(el, v){
+  function pause(el, v) {
     const st = ensureState(el);
     st.paused = v;
-    if (v && st.raf){ cancelAnimationFrame(st.raf); st.raf = 0; }
-    if (!v && !st.raf){ st.lastTs = 0; st.raf = requestAnimationFrame(ts=>tick(el, ts)); }
+    if (v && st.raf) { cancelAnimationFrame(st.raf); st.raf = 0; }
+    if (!v && !st.raf) { st.lastTs = 0; st.raf = requestAnimationFrame(ts => tick(el, ts)); }
   }
 
-  function stop(el){
+  function stop(el) {
     const st = ensureState(el);
-    if (st.raf){ cancelAnimationFrame(st.raf); st.raf = 0; }
-    if (st.pendingTimer){ clearTimeout(st.pendingTimer); st.pendingTimer = 0; }
+    if (st.raf) { cancelAnimationFrame(st.raf); st.raf = 0; }
+    if (st.pendingTimer) { clearTimeout(st.pendingTimer); st.pendingTimer = 0; }
     st.lastTs = 0; st.phase = 'run';
   }
 
-  function start(el){
+  function start(el) {
     stop(el);
     // 시작 시 상단으로
     el.scrollTop = 0;
     const st = ensureState(el);
-    st.raf = requestAnimationFrame(ts=>tick(el, ts));
+    st.raf = requestAnimationFrame(ts => tick(el, ts));
   }
 
-  function tick(el, ts){
+  function tick(el, ts) {
     const st = ensureState(el);
     if (st.paused) { st.raf = 0; return; }
 
@@ -56,31 +56,31 @@ window.__leaderboardLoaded = true;
     st.lastTs = ts;
 
     const maxScroll = el.scrollHeight - el.clientHeight;
-    if (maxScroll <= 0){ st.raf = 0; return; }
+    if (maxScroll <= 0) { st.raf = 0; return; }
 
-    if (st.phase === 'run'){
-      el.scrollTop = Math.min(maxScroll, el.scrollTop + (SCROLL_PX_PER_SEC * (dt/1000)));
-      if (el.scrollTop >= maxScroll - 1){
+    if (st.phase === 'run') {
+      el.scrollTop = Math.min(maxScroll, el.scrollTop + (SCROLL_PX_PER_SEC * (dt / 1000)));
+      if (el.scrollTop >= maxScroll - 1) {
         st.phase = 'bottom-pause';
-        st.pendingTimer = setTimeout(()=>{
+        st.pendingTimer = setTimeout(() => {
           st.pendingTimer = 0;
           el.scrollTop = 0; // jump to top; could animate if desired
           st.phase = 'top-pause';
-          st.pendingTimer = setTimeout(()=>{ st.pendingTimer = 0; st.phase = 'run'; st.raf = requestAnimationFrame(ts2=>tick(el, ts2)); }, TOP_PAUSE_MS);
+          st.pendingTimer = setTimeout(() => { st.pendingTimer = 0; st.phase = 'run'; st.raf = requestAnimationFrame(ts2 => tick(el, ts2)); }, TOP_PAUSE_MS);
         }, BOTTOM_PAUSE_MS);
         st.raf = 0;
         return;
       }
     }
 
-    st.raf = requestAnimationFrame(ts2=>tick(el, ts2));
+    st.raf = requestAnimationFrame(ts2 => tick(el, ts2));
   }
 
-  function refreshAllAutoScroll(){
+  function refreshAllAutoScroll() {
     allContainers = Array.from(document.querySelectorAll('.table-scroll'));
     allContainers.forEach(el => {
       stop(el);
-      if (el.scrollHeight > el.clientHeight){
+      if (el.scrollHeight > el.clientHeight) {
         start(el);
       } else {
         el.scrollTop = 0; // ensure reset when not scrollable
@@ -88,14 +88,14 @@ window.__leaderboardLoaded = true;
     });
   }
 
-  document.addEventListener('visibilitychange', ()=>{
+  document.addEventListener('visibilitychange', () => {
     allContainers.forEach(el => pause(el, document.hidden));
   });
 
   // 노출: 다른 스크립트(인라인 폴백)도 사용할 수 있게
   window.__autoScrollMgr = {
     refreshAll: refreshAllAutoScroll,
-    stopAll: ()=> allContainers.forEach(stop)
+    stopAll: () => allContainers.forEach(stop)
   };
 
   // ---- Rendering & Refresh ----
@@ -104,7 +104,7 @@ window.__leaderboardLoaded = true;
     $tbody.innerHTML = '';
     data.forEach((row, idx) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${idx+1}</td><td>${row.classid ?? ''}</td><td>${row.score ?? ''}</td>`;
+      tr.innerHTML = `<td>${idx + 1}</td><td>${row.class_id ?? ''}</td><td>${row.score ?? ''}</td>`;
       $tbody.appendChild(tr);
     });
   }
@@ -112,7 +112,7 @@ window.__leaderboardLoaded = true;
   async function refresh() {
     try {
       if ($err) $err.style.display = 'none';
-      const res = await fetch(api, {cache: 'no-store'});
+      const res = await fetch(api, { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const json = await res.json();
       if (json.error) throw new Error(json.error);

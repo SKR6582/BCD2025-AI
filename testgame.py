@@ -24,7 +24,7 @@ if game == equation_answer[random_equation.index(q)]:
     if not score.exist(usrid):
         score.update_ai_score(usrid, c_score)
     else :
-        score.insert_ai_data(classid=usrid, difficulty=0, client="1",score=c_score)
+        score.insert_ai_data(class_id=usrid, difficulty=0, client="1",score=c_score)
 
 else :
     print("Incorrect!")

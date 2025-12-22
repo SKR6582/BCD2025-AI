@@ -8,50 +8,50 @@
     <link rel="stylesheet" href="/templates/style.css" onerror="this.remove()" />
     <style>
         /* 기본 스타일 (style.css가 없으면 이 인라인 스타일이 적용) */
-        
-         :root {
+
+        :root {
             color-scheme: light dark;
         }
-        
+
         body {
-            font-family:'묘야체';
+            font-family: '묘야체';
             margin: 0;
             padding: 24px;
         }
-        
+
         h1 {
             margin: 0 0 16px;
         }
-        
+
         .boards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 16px;
         }
-        
+
         .board {
             border: 1px solid #ccc;
             border-radius: 8px;
             padding: 12px;
             background: rgba(0, 0, 0, 0.02);
         }
-        
+
         .board h2 {
             margin: 4px 0 12px;
             font-size: 18px;
         }
-        
+
         .table-scroll {
             max-height: 300px;
             overflow: auto;
             position: relative;
         }
-        
+
         table {
             width: 100%;
             border-collapse: collapse;
         }
-        
+
         th,
         td {
             padding: 8px;
@@ -59,25 +59,25 @@
             text-align: left;
             font-variant-numeric: tabular-nums;
         }
-        
+
         th {
             background: rgba(0, 0, 0, 0.04);
             position: sticky;
             top: 0;
             z-index: 1;
         }
-        
+
         caption {
             text-align: left;
             font-weight: 600;
             margin-bottom: 8px;
         }
-        
+
         .muted {
             opacity: .7;
             font-size: 14px;
         }
-        
+
         .error {
             color: #c62828;
             margin-top: 8px;
@@ -146,7 +146,7 @@
     <script>
         // script.js 로드 실패 대비 (인라인 폴백)
         if (!window.__leaderboardLoaded) {
-            (function() {
+            (function () {
                 const api = '/api/leaderboard';
                 const $err = document.getElementById('error');
 
@@ -275,7 +275,7 @@
                     $tbody.innerHTML = '';
                     data.forEach((row, idx) => {
                         const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${idx+1}</td><td>${row.classid ?? ''}</td><td>${row.score ?? ''}</td>`;
+                        tr.innerHTML = `<td>${idx + 1}</td><td>${row.class_id ?? ''}</td><td>${row.score ?? ''}</td>`;
                         $tbody.appendChild(tr);
                     });
                 }

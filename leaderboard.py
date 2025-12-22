@@ -19,7 +19,7 @@ async def leaderboard(ctx):
     )
     for arr in score.get_ranking_by_difficulty(difficulty=1) :
         embed.add_field(
-            name = arr["classid"],
+            name = arr["class_id"],
             value = arr["score"],
             inline = False
         )
