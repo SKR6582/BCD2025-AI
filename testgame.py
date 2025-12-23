@@ -20,11 +20,13 @@ except TypeError:
 if game == equation_answer[random_equation.index(q)]:
     print("Correct!")
     usrid = input("학번을 입력하세요 : ")
-    c_score = int(score.get_ai_data(usrid)["score"]) + 5
-    if not score.exist(usrid):
-        score.update_ai_score(usrid, c_score)
-    else :
-        score.insert_ai_data(class_id=usrid, difficulty=0, client="1",score=c_score)
+    user_data = score.get_ai_data(usrid)
+    if user_data:
+        c_score = int(user_data["score"]) + 5
+    else:
+        c_score = 5
+
+    score.insert_ai_data(class_id=usrid, difficulty=0, client="1", score=c_score)
 
 else :
     print("Incorrect!")

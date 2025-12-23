@@ -19,7 +19,7 @@ if parent_dir not in sys.path:
 from typing import List, Tuple, Optional
 from db_module.quiz import get_random_quiz_by_category, list_quiz_titles
 from db_module.db_connection import get_connection
-from db_module.score import insert_ai_data, exist, update_ai_score
+from db_module.score import insert_ai_data, exist, update_ai_score, get_ai_data
 
 # --- Configuration ---
 WINDOW_WIDTH = 1000
@@ -283,15 +283,18 @@ class Game:
         self.winner = None
         self.fail_reason = ""
 
-    def start_game_timers(self):
-        self.start_ticks = pygame.time.get_ticks()
+        # Start AI PREEMPTIVELY during countdown (3, 2, 1...)
+        self.start_ai_worker()
 
-        # Start AI Thread
+    def start_ai_worker(self):
         # Use title + description for prompt
         q_text = self.current_quiz.get('title', '') + " " + self.current_quiz.get('description', '')
         self.ai_thread = threading.Thread(target=self.run_ollama_worker, args=(q_text,))
         self.ai_thread.daemon = True # Allow main program to exit even if thread is running
         self.ai_thread.start()
+
+    def start_game_timers(self):
+        self.start_ticks = pygame.time.get_ticks()
 
     def check_answer(self, user_ans, real_ans):
         def norm(s): return str(s).strip().lower().replace(" ", "")
@@ -358,7 +361,16 @@ class Game:
         # 1. Check Correctness
         correct_ans = self.current_quiz.get('correct', '') or ""
         self.game_end_time = pygame.time.get_ticks() - self.start_ticks
-        self.score = self.game_end_time
+
+        # 1번 방식: 60,000ms(1분)에서 걸린 시간을 차감 (최소 0점)
+        round_score = max(0, 60000 - self.game_end_time)
+
+        # 기존 점수 가져오기 (누적 방식)
+        user_data = get_ai_data(self.student_id)
+        if user_data:
+            self.score = int(user_data['score']) + round_score
+        else:
+            self.score = round_score
 
         if self.check_answer(self.user_input, correct_ans):
             self.end_game('HUMAN', 'CORRECT')
@@ -445,7 +457,17 @@ class Game:
             # Check if AI finished and human hasn't submitted
             if self.ai_finished and self.winner is None:
                 self.game_end_time = pygame.time.get_ticks() - self.start_ticks
-                self.score = self.game_end_time
+
+                # 1번 방식 점수 계산
+                round_score = max(0, 60000 - self.game_end_time)
+
+                # 기존 점수와 합산
+                user_data = get_ai_data(self.student_id)
+                if user_data:
+                    self.score = int(user_data['score']) + round_score
+                else:
+                    self.score = round_score
+
                 # Validate AI Answer
                 # Parse "Answer: [XYZ]" from the end
                 # Regex look for "Answer:" then capture until end or newline
@@ -671,4 +693,4 @@ class Game:
 
 
 if __name__ == "__main__":
-    Game().run()
+        Game().run()

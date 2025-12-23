@@ -7,11 +7,15 @@ def insert_ai_data(difficulty, class_id, score, client):
             sql = """
             INSERT INTO BCD2025_AI (difficulty, class_id, score, client)
             VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            difficulty = VALUES(difficulty),
+            score = VALUES(score),
+            client = VALUES(client)
             """
             cursor.execute(sql, (difficulty, class_id, score, client))
         conn.commit()
     except Exception as e:
-        print("❌ Error inserting data:", e)
+        print("❌ Error inserting/updating data:", e)
     finally:
         conn.close()
 
